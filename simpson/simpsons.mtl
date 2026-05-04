@@ -39,3 +39,26 @@ Kd 0.35 0.18 0.07
 Ks 0.000 0.000 0.000
 d 1.000
 illum 1
+newmtl Madera
+Kd 1.0 1.0 1.0
+map_Kd madera.PNG
+
+newmtl Mat_2
+Kd 1.0 1.0 1.0
+map_Kd techo.PNG
+
+newmtl casa
+Kd 1.0 1.0 1.0
+map_Kd beige.PNG
+
+newmtl copa
+Kd 1.0 1.0 1.0
+map_Kd copa.PNG
+
+newmtl piso
+Kd 1.0 1.0 1.0
+map_Kd pasto.PNG
+
+newmtl tronco
+Kd 1.0 1.0 1.0
+map_Kd tronco.PNG
