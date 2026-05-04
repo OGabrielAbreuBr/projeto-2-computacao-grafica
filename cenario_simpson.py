@@ -21,11 +21,18 @@ from OpenGL.raw.GL.VERSION.GL_2_0 import (
 
 WIDTH = 1280
 HEIGHT = 720
-TITLE = "Projeto 2 - Casa dos Simpsons"
+TITLE = "Projeto 2 - Cottage com Skybox"
 
 ROOT = Path(__file__).resolve().parent
-SIMPSON_DIR = ROOT / "simpson"
-HOUSE_OBJ = SIMPSON_DIR / "simpsons.obj"
+
+HOUSE_DIR = ROOT / "casa"
+HOUSE_OBJ = HOUSE_DIR / "Cottage_FREE.obj"
+
+MODELS_DIR = ROOT / "modelos"
+SKYBOX_DIR = ROOT / "skybox"
+
+TEXTURES_DIR = ROOT / "texturas"
+GRASS_TEXTURE = TEXTURES_DIR / "grass.jpg"
 
 CAMERA_SPEED = 5.0
 MOUSE_SENSITIVITY = 0.01
@@ -33,7 +40,7 @@ SCENE_LIMIT = 80.0
 
 
 # =============================================================================
-# Shaders - pipeline moderno, sem iluminação
+# Shaders dos objetos
 # =============================================================================
 
 VERTEX_SHADER = """
@@ -75,6 +82,47 @@ void main()
 """
 
 
+# =============================================================================
+# Shaders da skybox
+# =============================================================================
+
+SKYBOX_VERTEX_SHADER = """
+#version 330 core
+
+layout (location = 0) in vec3 aPos;
+
+out vec3 TexCoords;
+
+uniform mat4 view;
+uniform mat4 projection;
+
+void main()
+{
+    TexCoords = aPos;
+    vec4 pos = projection * view * vec4(aPos, 1.0);
+    gl_Position = pos.xyww;
+}
+"""
+
+SKYBOX_FRAGMENT_SHADER = """
+#version 330 core
+
+in vec3 TexCoords;
+out vec4 FragColor;
+
+uniform samplerCube skybox;
+
+void main()
+{
+    FragColor = texture(skybox, TexCoords);
+}
+"""
+
+
+# =============================================================================
+# Compilação de shaders
+# =============================================================================
+
 def compile_shader(source: str, shader_type: int) -> int:
     shader = glCreateShader(shader_type)
     glShaderSource(shader, source)
@@ -87,9 +135,9 @@ def compile_shader(source: str, shader_type: int) -> int:
     return shader
 
 
-def create_program() -> int:
-    vertex = compile_shader(VERTEX_SHADER, GL_VERTEX_SHADER)
-    fragment = compile_shader(FRAGMENT_SHADER, GL_FRAGMENT_SHADER)
+def create_program(vertex_source: str, fragment_source: str) -> int:
+    vertex = compile_shader(vertex_source, GL_VERTEX_SHADER)
+    fragment = compile_shader(fragment_source, GL_FRAGMENT_SHADER)
 
     program = glCreateProgram()
     glAttachShader(program, vertex)
@@ -124,7 +172,7 @@ def set_mat4(program: int, name: str, matrix: np.ndarray) -> None:
 
 
 # =============================================================================
-# Matrizes Model, View, Projection
+# Matrizes
 # =============================================================================
 
 def normalize(v: np.ndarray) -> np.ndarray:
@@ -295,16 +343,166 @@ def resolve_texture_path(base_dir: Path, tex_name: str) -> Optional[Path]:
     tex_name = tex_name.replace("\\", "/").strip()
 
     direct = base_dir / tex_name
+
     if direct.exists():
         return direct
 
     wanted = Path(tex_name).name.lower()
 
+    # Procura em toda a pasta do modelo.
     for candidate in base_dir.rglob("*"):
         if candidate.is_file() and candidate.name.lower() == wanted:
             return candidate
 
+    # Procura também a partir da raiz do projeto.
+    for candidate in ROOT.rglob("*"):
+        if candidate.is_file() and candidate.name.lower() == wanted:
+            return candidate
+
     return None
+
+
+# =============================================================================
+# Cubemap da skybox
+# =============================================================================
+
+def load_cubemap(faces: List[Path]) -> int:
+    texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id)
+
+    for i, face in enumerate(faces):
+        if not face.exists():
+            raise FileNotFoundError(f"Face da skybox não encontrada: {face}")
+
+        img = Image.open(face).convert("RGB")
+        data = np.array(img, dtype=np.uint8)
+
+        glTexImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+            0,
+            GL_RGB,
+            img.width,
+            img.height,
+            0,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
+            data,
+        )
+
+        print(f"[OK] Face skybox carregada: {face.name}")
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
+
+    return texture_id
+
+
+SKYBOX_VERTICES = [
+    -1.0,  1.0, -1.0,
+    -1.0, -1.0, -1.0,
+     1.0, -1.0, -1.0,
+     1.0, -1.0, -1.0,
+     1.0,  1.0, -1.0,
+    -1.0,  1.0, -1.0,
+
+    -1.0, -1.0,  1.0,
+    -1.0, -1.0, -1.0,
+    -1.0,  1.0, -1.0,
+    -1.0,  1.0, -1.0,
+    -1.0,  1.0,  1.0,
+    -1.0, -1.0,  1.0,
+
+     1.0, -1.0, -1.0,
+     1.0, -1.0,  1.0,
+     1.0,  1.0,  1.0,
+     1.0,  1.0,  1.0,
+     1.0,  1.0, -1.0,
+     1.0, -1.0, -1.0,
+
+    -1.0, -1.0,  1.0,
+    -1.0,  1.0,  1.0,
+     1.0,  1.0,  1.0,
+     1.0,  1.0,  1.0,
+     1.0, -1.0,  1.0,
+    -1.0, -1.0,  1.0,
+
+    -1.0,  1.0, -1.0,
+     1.0,  1.0, -1.0,
+     1.0,  1.0,  1.0,
+     1.0,  1.0,  1.0,
+    -1.0,  1.0,  1.0,
+    -1.0,  1.0, -1.0,
+
+    -1.0, -1.0, -1.0,
+    -1.0, -1.0,  1.0,
+     1.0, -1.0, -1.0,
+     1.0, -1.0, -1.0,
+    -1.0, -1.0,  1.0,
+     1.0, -1.0,  1.0,
+]
+
+
+class Skybox:
+    def __init__(self, folder: Path) -> None:
+        faces = [
+            folder / "px.png",
+            folder / "nx.png",
+            folder / "py.png",
+            folder / "ny.png",
+            folder / "pz.png",
+            folder / "nz.png",
+        ]
+
+        self.texture_id = load_cubemap(faces)
+
+        vertices = np.array(SKYBOX_VERTICES, dtype=np.float32)
+
+        self.vao = glGenVertexArrays(1)
+        self.vbo = glGenBuffers(1)
+
+        glBindVertexArray(self.vao)
+        glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
+        glBufferData(GL_ARRAY_BUFFER, vertices.nbytes, vertices, GL_STATIC_DRAW)
+
+        raw_glVertexAttribPointer(
+            0,
+            3,
+            GL_FLOAT,
+            GL_FALSE,
+            3 * 4,
+            ctypes.c_void_p(0),
+        )
+        glEnableVertexAttribArray(0)
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+    def draw(self, program: int, view: np.ndarray, projection: np.ndarray) -> None:
+        glDepthFunc(GL_LEQUAL)
+        glDepthMask(GL_FALSE)
+
+        glUseProgram(program)
+
+        view_without_translation = view.copy()
+        view_without_translation[0:3, 3] = 0.0
+
+        set_mat4(program, "view", view_without_translation)
+        set_mat4(program, "projection", projection)
+        set_int(program, "skybox", 0)
+
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, self.texture_id)
+
+        glBindVertexArray(self.vao)
+        glDrawArrays(GL_TRIANGLES, 0, 36)
+        glBindVertexArray(0)
+
+        glDepthMask(GL_TRUE)
+        glDepthFunc(GL_LESS)
 
 
 # =============================================================================
@@ -343,10 +541,24 @@ class Mesh:
 
         stride = 5 * 4
 
-        raw_glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(0))
+        raw_glVertexAttribPointer(
+            0,
+            3,
+            GL_FLOAT,
+            GL_FALSE,
+            stride,
+            ctypes.c_void_p(0),
+        )
         glEnableVertexAttribArray(0)
 
-        raw_glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(3 * 4))
+        raw_glVertexAttribPointer(
+            1,
+            2,
+            GL_FLOAT,
+            GL_FALSE,
+            stride,
+            ctypes.c_void_p(3 * 4),
+        )
         glEnableVertexAttribArray(1)
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
@@ -367,6 +579,28 @@ class Mesh:
         glDrawArrays(GL_TRIANGLES, 0, self.count)
         glBindVertexArray(0)
 
+def create_plane(width: float, depth: float, uv_repeat: float, texture_path: Optional[Path], tint=(1.0, 1.0, 1.0)) -> Mesh:
+    w = width / 2.0
+    d = depth / 2.0
+
+    vertices = [
+        -w, 0.0, -d, 0.0, 0.0,
+         w, 0.0, -d, uv_repeat, 0.0,
+         w, 0.0,  d, uv_repeat, uv_repeat,
+
+        -w, 0.0, -d, 0.0, 0.0,
+         w, 0.0,  d, uv_repeat, uv_repeat,
+        -w, 0.0,  d, 0.0, uv_repeat,
+    ]
+
+    mesh = Mesh(
+        vertices=vertices,
+        texture_path=texture_path,
+        tint=tint,
+    )
+    mesh.upload()
+    return mesh
+
 
 @dataclass
 class OBJModel:
@@ -378,7 +612,7 @@ class OBJModel:
 
 
 # =============================================================================
-# Parser MTL
+# Parser MTL / OBJ
 # =============================================================================
 
 def parse_mtl(mtl_path: Path) -> Dict[str, Material]:
@@ -440,16 +674,12 @@ def parse_mtl(mtl_path: Path) -> Dict[str, Material]:
                     if tex_path is None:
                         print(f"[AVISO] Textura do material não encontrada: {tex_name}")
                     else:
-                        print(f"[OK] Textura encontrada: {tex_path.name}")
+                        print(f"[OK] Textura encontrada: {tex_path}")
 
                     materials[current_name].texture_path = tex_path
 
     return materials
 
-
-# =============================================================================
-# Parser OBJ
-# =============================================================================
 
 def parse_obj_index(text: str, size: int) -> int:
     idx = int(text)
@@ -495,7 +725,13 @@ def load_obj(obj_path: Path) -> OBJModel:
         else:
             uv = (0.0, 0.0)
 
-        current_vertices.extend([pos[0], pos[1], pos[2], uv[0], uv[1]])
+        current_vertices.extend([
+            pos[0],
+            pos[1],
+            pos[2],
+            uv[0],
+            uv[1],
+        ])
 
     with open(obj_path, "r", encoding="utf-8", errors="ignore") as file:
         for raw in file:
@@ -514,14 +750,22 @@ def load_obj(obj_path: Path) -> OBJModel:
 
             elif cmd == "usemtl" and len(parts) >= 2:
                 finish_submesh()
+
                 mat_name = " ".join(parts[1:])
                 current_material = materials.get(mat_name, Material())
 
             elif cmd == "v" and len(parts) >= 4:
-                positions.append((float(parts[1]), float(parts[2]), float(parts[3])))
+                positions.append((
+                    float(parts[1]),
+                    float(parts[2]),
+                    float(parts[3]),
+                ))
 
             elif cmd == "vt" and len(parts) >= 3:
-                texcoords.append((float(parts[1]), float(parts[2])))
+                texcoords.append((
+                    float(parts[1]),
+                    float(parts[2]),
+                ))
 
             elif cmd == "f" and len(parts) >= 4:
                 face = parts[1:]
@@ -552,7 +796,7 @@ def load_obj(obj_path: Path) -> OBJModel:
 
 
 # =============================================================================
-# Cálculo de escala e centralização automática
+# Bounds e ajuste automático
 # =============================================================================
 
 def get_obj_bounds(obj_path: Path) -> Tuple[np.ndarray, np.ndarray]:
@@ -611,50 +855,49 @@ def fit_obj_on_ground(
     ty = target_center[1] - float(min_v[1]) * factor
     tz = target_center[2] - rotated_center_z
 
-    print("[INFO] Bounds do OBJ:")
-    print(f"       min = {min_v}")
-    print(f"       max = {max_v}")
-    print(f"       size = {size}")
-    print(f"       scale factor = {factor}")
-    print(f"       position = {(tx, ty, tz)}")
+    print(f"[INFO] {obj_path.name}: scale={factor}, position={(tx, ty, tz)}")
+
+    return (tx, ty, tz), (factor, factor, factor)
+
+
+def fit_small_obj_on_ground(
+    obj_path: Path,
+    target_size: float,
+    target_center: Tuple[float, float, float],
+    rotation_y_degrees: float = 0.0,
+) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+    min_v, max_v = get_obj_bounds(obj_path)
+
+    size = max_v - min_v
+    center = (min_v + max_v) / 2.0
+
+    maior_lado = max(float(size[0]), float(size[1]), float(size[2]))
+
+    if maior_lado <= 0.0001:
+        factor = 1.0
+    else:
+        factor = target_size / maior_lado
+
+    angle = math.radians(rotation_y_degrees)
+    c = math.cos(angle)
+    s = math.sin(angle)
+
+    center_scaled = center * factor
+
+    rotated_center_x = c * center_scaled[0] + s * center_scaled[2]
+    rotated_center_z = -s * center_scaled[0] + c * center_scaled[2]
+
+    tx = target_center[0] - rotated_center_x
+    ty = target_center[1] - float(min_v[1]) * factor
+    tz = target_center[2] - rotated_center_z
+
+    print(f"[INFO] {obj_path.name}: scale={factor}, position={(tx, ty, tz)}")
 
     return (tx, ty, tz), (factor, factor, factor)
 
 
 # =============================================================================
-# Skybox simples
-# =============================================================================
-
-def create_cube_mesh(tint: Tuple[float, float, float]) -> Mesh:
-    p = 0.5
-
-    vertices = [
-        -p, -p,  p, 0, 0,   p, -p,  p, 1, 0,   p,  p,  p, 1, 1,
-        -p, -p,  p, 0, 0,   p,  p,  p, 1, 1,  -p,  p,  p, 0, 1,
-
-         p, -p, -p, 0, 0,  -p, -p, -p, 1, 0,  -p,  p, -p, 1, 1,
-         p, -p, -p, 0, 0,  -p,  p, -p, 1, 1,   p,  p, -p, 0, 1,
-
-        -p, -p, -p, 0, 0,  -p, -p,  p, 1, 0,  -p,  p,  p, 1, 1,
-        -p, -p, -p, 0, 0,  -p,  p,  p, 1, 1,  -p,  p, -p, 0, 1,
-
-         p, -p,  p, 0, 0,   p, -p, -p, 1, 0,   p,  p, -p, 1, 1,
-         p, -p,  p, 0, 0,   p,  p, -p, 1, 1,   p,  p,  p, 0, 1,
-
-        -p,  p,  p, 0, 0,   p,  p,  p, 1, 0,   p,  p, -p, 1, 1,
-        -p,  p,  p, 0, 0,   p,  p, -p, 1, 1,  -p,  p, -p, 0, 1,
-
-        -p, -p, -p, 0, 0,   p, -p, -p, 1, 0,   p, -p,  p, 1, 1,
-        -p, -p, -p, 0, 0,   p, -p,  p, 1, 1,  -p, -p,  p, 0, 1,
-    ]
-
-    mesh = Mesh(vertices=vertices, texture_path=None, tint=tint)
-    mesh.upload()
-    return mesh
-
-
-# =============================================================================
-# Objeto de cena
+# Objetos da cena
 # =============================================================================
 
 @dataclass
@@ -671,15 +914,53 @@ class SceneObject:
         self.mesh.draw(program)
 
 
+def add_model_object(
+    objects: List[SceneObject],
+    name: str,
+    filename: str,
+    target_size: float,
+    target_center: Tuple[float, float, float],
+    rotation: Tuple[float, float, float],
+    optional: bool = True,
+) -> None:
+    obj_path = MODELS_DIR / filename
+
+    if not obj_path.exists():
+        msg = f"[AVISO] Modelo não encontrado: {obj_path}"
+
+        if optional:
+            print(msg)
+            return
+
+        raise FileNotFoundError(msg)
+
+    model = load_obj(obj_path)
+
+    position, scale = fit_small_obj_on_ground(
+        obj_path=obj_path,
+        target_size=target_size,
+        target_center=target_center,
+        rotation_y_degrees=rotation[1],
+    )
+
+    objects.append(SceneObject(
+        name=name,
+        mesh=model,
+        position=position,
+        rotation=rotation,
+        scale=scale,
+    ))
+
+
 # =============================================================================
 # Câmera
 # =============================================================================
 
 class Camera:
     def __init__(self) -> None:
-        self.position = np.array([0.0, 4.0, 45.0], dtype=np.float32)
+        self.position = np.array([0.0, 3.5, 28.0], dtype=np.float32)
         self.yaw = -90.0
-        self.pitch = -6.0
+        self.pitch = -5.0
 
         self.front = np.array([0.0, 0.0, -1.0], dtype=np.float32)
         self.up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
@@ -806,40 +1087,84 @@ def build_scene() -> List[SceneObject]:
 
     if not HOUSE_OBJ.exists():
         raise FileNotFoundError(
-            "Não encontrei simpson/simpsons.obj.\n"
-            "Confira se existe a pasta 'simpson' na mesma pasta do código "
-            "e se o arquivo está exatamente com o nome 'simpsons.obj'."
+            f"Não encontrei a casa: {HOUSE_OBJ}\n\n"
+            "Coloque os arquivos assim:\n"
+            "  casa/Cottage_FREE.obj\n"
+            "  casa/Cottage_FREE.mtl\n"
+            "  casa/Cottage_Clean/texturas...\n"
         )
-
-    skybox_mesh = create_cube_mesh(tint=(0.55, 0.70, 0.90))
-
-    objects.append(SceneObject(
-        name="skybox",
-        mesh=skybox_mesh,
-        position=(0.0, 25.0, 0.0),
-        rotation=(0.0, 0.0, 0.0),
-        scale=(180.0, 90.0, 180.0),
-    ))
 
     house_model = load_obj(HOUSE_OBJ)
 
-    # Se a casa abrir de costas, troque para 180.0.
     house_rotation_y = 0.0
 
     house_position, house_scale = fit_obj_on_ground(
         HOUSE_OBJ,
-        target_width=45.0,
+        target_width=26.0,
         target_center=(0.0, 0.0, 0.0),
         rotation_y_degrees=house_rotation_y,
     )
 
     objects.append(SceneObject(
-        name="casa_simpsons",
+        name="cottage",
         mesh=house_model,
         position=house_position,
         rotation=(0.0, house_rotation_y, 0.0),
         scale=house_scale,
     ))
+
+    # -------------------------------------------------------------------------
+    # Chão de grama
+    # -------------------------------------------------------------------------
+    grass_mesh = create_plane(
+        width=120.0,
+        depth=120.0,
+        uv_repeat=20.0,
+        texture_path=GRASS_TEXTURE,
+    )
+
+    objects.append(SceneObject(
+        name="grama",
+        mesh=grass_mesh,
+        position=(0.0, -0.02, 0.0),
+        rotation=(0.0, 0.0, 0.0),
+        scale=(1.0, 1.0, 1.0),
+    ))
+
+    # -------------------------------------------------------------------------
+    # Objetos internos
+    # Ajuste target_center conforme o interior da cottage.
+    # -------------------------------------------------------------------------
+
+    add_model_object(
+        objects=objects,
+        name="sofa_interno",
+        filename="HSM0012.obj",
+        target_size=3.0,
+        target_center=(-3.5, 0.10, -1.5),
+        rotation=(0.0, 90.0, 0.0),
+        optional=True,
+    )
+
+    add_model_object(
+        objects=objects,
+        name="tv_interna",
+        filename="Old_TV.obj",
+        target_size=1.6,
+        target_center=(0.5, 0.10, -3.0),
+        rotation=(0.0, 180.0, 0.0),
+        optional=True,
+    )
+
+    add_model_object(
+        objects=objects,
+        name="mesa_interna",
+        filename="mesa.obj",
+        target_size=2.0,
+        target_center=(-1.5, 0.10, -1.8),
+        rotation=(0.0, 0.0, 0.0),
+        optional=True,
+    )
 
     return objects
 
@@ -873,13 +1198,15 @@ def main() -> None:
 
     glViewport(0, 0, WIDTH, HEIGHT)
     glEnable(GL_DEPTH_TEST)
-
-    # Desliga culling para permitir ver o lado interno da skybox.
     glDisable(GL_CULL_FACE)
 
-    program = create_program()
+    program = create_program(VERTEX_SHADER, FRAGMENT_SHADER)
+    skybox_program = create_program(SKYBOX_VERTEX_SHADER, SKYBOX_FRAGMENT_SHADER)
+
     glUseProgram(program)
     set_int(program, "texture1", 0)
+
+    skybox = Skybox(SKYBOX_DIR)
 
     print()
     print("Controles:")
@@ -903,23 +1230,21 @@ def main() -> None:
         glClearColor(0.55, 0.70, 0.90, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        glUseProgram(program)
-
         view = camera.get_view()
         projection = perspective(60.0, WIDTH / HEIGHT, 0.1, 300.0)
 
+        glUseProgram(program)
         set_mat4(program, "view", view)
         set_mat4(program, "projection", projection)
 
         for obj in scene_objects:
-            if obj.name == "skybox":
-                glDepthMask(GL_FALSE)
-                obj.draw(program)
-                glDepthMask(GL_TRUE)
+            obj.draw(program)
 
-        for obj in scene_objects:
-            if obj.name != "skybox":
-                obj.draw(program)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+        skybox.draw(skybox_program, view, projection)
+
+        if wireframe:
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
         glfw.swap_buffers(window)
         glfw.poll_events()
