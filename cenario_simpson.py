@@ -1176,9 +1176,9 @@ def build_scene() -> List[SceneObject]:
         objects=objects,
         name="sofa_interno",
         filename="HSM0012.obj",
-        target_size=3.0,
-        target_center=(-3.5, 0.10, -1.5),
-        rotation=(0.0, 270.0, 0.0),
+        target_size=5,
+        target_center=(3.0, -1.0, -1.0),
+        rotation=(-90.0, 90.0, 0.0),
         optional=True,
     )
 
@@ -1187,7 +1187,7 @@ def build_scene() -> List[SceneObject]:
         name="tv_interna",
         filename="Old_TV.obj",
         target_size=1.6,
-        target_center=(0.5, 0.10, -3.0),
+        target_center=(0.5, 0.10, 0.5),
         rotation=(0.0, 180.0, 0.0),
         optional=True,
     )
