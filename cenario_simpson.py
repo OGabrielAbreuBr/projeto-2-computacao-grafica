@@ -33,6 +33,8 @@ SKYBOX_DIR = ROOT / "skybox"
 
 TEXTURES_DIR = ROOT / "texturas"
 GRASS_TEXTURE = TEXTURES_DIR / "grass.jpg"
+HOUSE_FLOOR_TEXTURE = TEXTURES_DIR / "wood.jpg"
+
 
 CAMERA_SPEED = 5.0
 MOUSE_SENSITIVITY = 0.01
@@ -1114,6 +1116,40 @@ def build_scene() -> List[SceneObject]:
     ))
 
     # -------------------------------------------------------------------------
+    # Piso interno da casa
+    # -------------------------------------------------------------------------
+    house_floor_mesh = create_plane(
+        width=20.0,
+        depth=18.65,
+        uv_repeat=8.0,
+        texture_path=HOUSE_FLOOR_TEXTURE,
+    )
+
+    objects.append(SceneObject(
+    name="piso_interno_casa",
+    mesh=house_floor_mesh,
+    position=(0.0, 0.08, -1.9),
+    rotation=(0.0, house_rotation_y, 0.0),
+    scale=(1.0, 1.0, 1.0),
+    )) 
+
+     # Piso parte menor (a “perna” do L)
+    house_floor_mesh_2 = create_plane(
+        width=8.0,
+        depth=4.0,
+        uv_repeat=4.0,
+        texture_path=HOUSE_FLOOR_TEXTURE,
+    )
+
+    objects.append(SceneObject(
+        name="piso_parte_2",
+        mesh=house_floor_mesh_2,
+        position=(-6.0, 0.08, 9.4),
+        rotation=(0.0, house_rotation_y, 0.0),
+        scale=(1.0, 1.0, 1.0),
+    ))
+
+    # -------------------------------------------------------------------------
     # Chão de grama
     # -------------------------------------------------------------------------
     grass_mesh = create_plane(
@@ -1142,7 +1178,7 @@ def build_scene() -> List[SceneObject]:
         filename="HSM0012.obj",
         target_size=3.0,
         target_center=(-3.5, 0.10, -1.5),
-        rotation=(0.0, 90.0, 0.0),
+        rotation=(0.0, 270.0, 0.0),
         optional=True,
     )
 
