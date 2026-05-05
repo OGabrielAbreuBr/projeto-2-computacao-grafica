@@ -1249,7 +1249,6 @@ def build_scene() -> List[SceneObject]:
 
     # -------------------------------------------------------------------------
     # Objetos internos
-    # Ajuste target_center conforme o interior da cottage.
     # -------------------------------------------------------------------------
 
     scaling_object = add_model_object(
@@ -1257,7 +1256,7 @@ def build_scene() -> List[SceneObject]:
         name="sofa_interno",
         filename="sofa/HSM0012.obj",
         target_size=5,
-        target_center=(-3.0, -1.0, -1.0),
+        target_center=(5.0, -1.0, -0.5),
         rotation=(-90.0, 90.0, 0.0),
         optional=True,
     )
@@ -1267,7 +1266,7 @@ def build_scene() -> List[SceneObject]:
         name="mesa_interna",
         filename="mesa/mesa.obj",
         target_size=2.2,
-        target_center=(-1.4, 0.10, -2.6),
+        target_center=(8.0, 0.10, -0.5),
         rotation=(0.0, 0.0, 0.0),
         optional=True,
     )
@@ -1277,7 +1276,7 @@ def build_scene() -> List[SceneObject]:
         name="retro_tv_interna",
         filename="retro_tv/retro_tv.obj",
         target_size=1.7,
-        target_center=(2.0, 0.10, -2.1),
+        target_center=(8.0, 1.3, -0.5),
         rotation=(0.0, -90.0, 0.0),
         optional=True,
     )
@@ -1286,19 +1285,31 @@ def build_scene() -> List[SceneObject]:
         objects=objects,
         name="pessoa_interna",
         filename="pessoa/human.obj",
-        target_size=2.2,
-        target_center=(5.0, 0.10, -2.0),
+        target_size=4.0,
+        target_center=(-5.0, 0.10, -2.0),
         rotation=(0.0, 180.0, 0.0),
         optional=True,
     )
 
+    add_model_object(
+        objects=objects,
+        name="lareira",
+        filename="lareira/13110_Fireplace_v2_l3.obj",
+        target_size=5,
+        target_center=(-7.9, -2.0, 0.0),
+        rotation=(270.0, 90.0, 0.0),
+        optional=True,
+    )
+    # -------------------------------------------------------------------------
+    # Objetos externos
+    # -------------------------------------------------------------------------
     translating_object = add_model_object(
         objects=objects,
         name="carro",
         filename="carro/Generic_Old_Car.obj",
         target_size=10.2,
-        target_center=(-4.4, 0.10, 20.6),
-        rotation=(0.0, 0.0, 0.0),
+        target_center=(4.0, 0.10, 16.6),
+        rotation=(0.0, 180.0, 0.0),
         optional=True,
     )
 
@@ -1307,7 +1318,7 @@ def build_scene() -> List[SceneObject]:
         name="Galinha",
         filename="galinha/Chicken_Quad.obj",
         target_size=1.7,
-        target_center=(5.0, 0.10, -2.1),
+        target_center=(-10.0, 0.10, 20.0),
         rotation=(0.0, -90.0, 0.0),
         optional=True,
     )
@@ -1316,8 +1327,8 @@ def build_scene() -> List[SceneObject]:
         objects=objects,
         name="Vaca",
         filename="vaca/Cow_Low_Poly.obj",
-        target_size=1.7,
-        target_center=(2.0, 0.10, -2.1),
+        target_size=4,
+        target_center=(-5.0, 0.10, 15.0),
         rotation=(0.0, -90.0, 0.0),
         optional=True,
     )

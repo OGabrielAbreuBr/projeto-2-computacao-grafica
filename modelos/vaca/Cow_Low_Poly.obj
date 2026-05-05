@@ -1,7 +1,6 @@
 # Blender 4.0.1
 # www.blender.org
 mtllib Cow_Low_Poly.mtl
-o Cow_Low_Poly
 v -0.417348 1.079338 -0.709110
 v -0.416031 0.956608 -0.710772
 v -0.416134 0.998093 -0.818069
@@ -1979,7 +1978,7 @@ vt 0.368673 0.648486
 vt 0.029265 0.079005
 vt 0.521440 0.189704
 s 1
-usemtl Cow_Tris_Material
+usemtl Cow_Quad_Material
 f 216/1/1 214/2/2 240/3/3
 f 214/2/2 218/4/4 240/3/3
 f 266/5/5 216/1/1 240/3/3

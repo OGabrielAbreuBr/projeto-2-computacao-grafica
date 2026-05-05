@@ -1175,7 +1175,7 @@ def build_scene() -> List[SceneObject]:
     add_model_object(
         objects=objects,
         name="sofa_interno",
-        filename="HSM0012.obj",
+        filename="models/sofa/HSM0012.obj",
         target_size=5,
         target_center=(3.0, -1.0, -1.0),
         rotation=(-90.0, 90.0, 0.0),
